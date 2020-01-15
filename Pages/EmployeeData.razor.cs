@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace BlazorServerCrud.Pages
 {
-    public class EmployeeDataModel : ComponentBase
+    public partial class EmployeeData : ComponentBase
     {
         [Inject]
         protected EmployeeService employeeService { get; set; }
-
+        protected Employee employee = new Employee();
         protected List<Employee> empList;
         protected List<Cities> cityList = new List<Cities>();
         protected Employee emp = new Employee();
@@ -100,6 +100,11 @@ namespace BlazorServerCrud.Pages
         {
             this.isAdd = false;
             this.isDelete = false;
+        }
+
+        protected async Task HandleValidSubmit()
+        {
+            await SaveEmployee();
         }
     }
 }
