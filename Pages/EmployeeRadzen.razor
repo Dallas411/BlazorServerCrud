@@ -1,0 +1,202 @@
+﻿@page "/employeeRadzen"
+@using BlazorServerCrud.Models
+@using  BlazorServerCrud.Infrastructures
+@using BlazorServerCrud.Services
+@inject EmployeeDataAccessLayer dbContext
+@inject EmployeeService employeeService
+
+<div class="row" style="padding-left:15px">
+    <div style="float:left;padding-bottom:2px;">
+        <button class="btn btn-primary" @onclick="AddEmployee">Add Employee</button>
+    </div>
+</div>
+
+<RadzenCard Visible="@isAdd">
+
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">@modalTitle</h3>
+                    <button type="button" class="close" @onclick="closeModal">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="Name" class="control-label">Name</label>
+                            <input for="Name" class="form-control" @bind="employee.Name" />
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Gender" class="control-label">Gender</label>
+                            <select asp-for="Gender" class="form-control" @bind="employee.Gender">
+                                <option value="">-- Select Gender --</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Department" class="control-label">Department</label>
+                            <input asp-for="Department" class="form-control" @bind="employee.Department" />
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="City" class="control-label">City</label>
+                            @*<select asp-for="City" class="form-control" @bind="employee.City">
+                                    <option value="">-- Select City --</option>
+                                    @foreach (var city in cityList)
+                                    {
+                                        <option value="@city.CityName">@city.CityName</option>
+                                    }
+                                </select>*@
+                            <br />
+                            <RadzenDropDown AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@cityList" @bind-Value="employee.City"
+                                            TextProperty="CityName" ValueProperty="CityName" Style="margin-bottom: 20px; width:400px;" />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-block btn-info" @onclick="(async () => await SaveEmployee())" data-dismiss="modal">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</RadzenCard>
+<RadzenCard Visible="@isDelete">
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Delete Employee</h3>
+                </div>
+                <div class="modal-body">
+                    <h4>Do you want to delete this employee ??</h4>
+                    <table class="table">
+                        <tr>
+                            <td>Name</td>
+                            <td>@employee.Name</td>
+                        </tr>
+                        <tr>
+                            <td>Gender</td>
+                            <td>@employee.Gender</td>
+                        </tr>
+                        <tr>
+                            <td>Department</td>
+                            <td>@employee.Department</td>
+                        </tr>
+                        <tr>
+                            <td>City</td>
+                            <td>@employee.City</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <RadzenButton Click="@(async () => await DeleteEmployee(employee.EmployeeId))" Text="Yes" />
+                    <RadzenButton Click="@closeModal" Text="No" />
+                </div>
+            </div>
+        </div>
+    </div>
+</RadzenCard>
+
+@if (employees == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4" AllowSorting="true" Data="@employees" Value="@employee" TItem="Employee" ColumnWidth="200px">
+        <Columns>
+            <RadzenGridColumn TItem="Employee" Property="EmployeeId" Title="Employee ID" />
+            <RadzenGridColumn TItem="Employee" Property="Name" Title="Name" />
+            <RadzenGridColumn TItem="Employee" Property="City" Title="City" />
+            <RadzenGridColumn TItem="Employee" Property="Gender" Title="Gender" />
+            <RadzenGridColumn TItem="Employee" Context="sampleBlazorModelsSampleOrder" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="100px">
+                <Template Context="employee">
+                    <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => EditEmployee(employee.EmployeeId))">
+                    </RadzenButton>
+                    <RadzenButton Icon="delete" Size="ButtonSize.Small" Click="@(args => DeleteConfirm(employee.EmployeeId))">
+                    </RadzenButton>
+                </Template>
+            </RadzenGridColumn>
+        </Columns>
+    </RadzenGrid>
+}
+
+@code {
+    IEnumerable<Employee> employees;
+    Employee employee;
+    List<Cities> cityList = new List<Cities>();
+    string modalTitle { get; set; }
+    Boolean isAdd = false;
+    Boolean isDelete = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        cityList = await employeeService.GetCities();
+
+        employees = await Task.FromResult(dbContext.GetAllEmployees());
+        employee = employees.FirstOrDefault();
+    }
+
+    protected async Task EditEmployee(int empID)
+    {
+        employee = await employeeService.Details(empID);
+        this.modalTitle = "Edit Employee";
+        this.isAdd = true;
+    }
+
+    protected async Task SaveEmployee()
+    {
+        if (employee.EmployeeId != 0)
+        {
+            await Task.Run(() =>
+            {
+                employeeService.Edit(employee);
+            });
+        }
+        else
+        {
+            await Task.Run(() =>
+            {
+                employeeService.Create(employee);
+            });
+        }
+        this.isAdd = false;
+        await GetEmployee();
+    }
+
+    protected async Task GetEmployee()
+    {
+        employees = await employeeService.GetEmployeeList();
+    }
+
+    protected void AddEmployee()
+    {
+        employee = new Employee();
+        this.modalTitle = "Add Employee";
+        this.isAdd = true;
+    }
+
+    protected void closeModal()
+    {
+        this.isAdd = false;
+        isDelete = false;
+    }
+
+    protected async Task DeleteConfirm(int empID)
+    {
+        employee = await employeeService.Details(empID);
+        this.isDelete = true;
+    }
+
+    protected async Task DeleteEmployee(int empID)
+    {
+        await Task.Run(() =>
+        {
+            employeeService.Delete(empID);
+        });
+        this.isDelete = false;
+        await GetEmployee();
+    }
+}
