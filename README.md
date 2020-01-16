@@ -1,5 +1,5 @@
 # BlazorServerCrud
-This sample demonstrates CRUD operation on Blazor Server
+This sample demonstrates CRUD operation on Blazor Server with and without Radzen Blazor Components
 
 Freely inspired by https://ankitsharmablogs.com/single-page-application-using-server-side-blazor/
 
